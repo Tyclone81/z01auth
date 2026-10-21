@@ -16,7 +16,7 @@ class PermissionItem {
   });
 }
 
-/// Frame 2: 02_Permissions (Android 10+ Permission Onboarding)
+/// Frame 2: 02_Permissions (Android 6.0+ Permission Onboarding)
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
 
@@ -105,7 +105,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             padding: const EdgeInsets.only(right: 16.0),
             child: Center(
               child: Text(
-                'Android 10+ Flow',
+                'Android 6.0+ Flow',
                 style: Z01Theme.monoStyle(context: context, fontSize: 11, color: mutedCol),
               ),
             ),
