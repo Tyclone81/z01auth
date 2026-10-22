@@ -24,6 +24,13 @@ class Z01Colors {
   static const Color lightMuted = Color(0xFF666666);
   static const Color lightAccent = Color(0xFF000000);
   static const Color lightAccentFg = Color(0xFFFFFFFF);
+
+  // Fintech / Security Accent Tokens (Inspired by Dribbble Fintech UI)
+  static const Color electricBlue = Color(0xFF0E61FA);
+  static const Color cyanGlow = Color(0xFF00C2FF);
+  static const Color lockedMuted = Color(0xFF64748B);
+  static const Color lockedAmber = Color(0xFFF59E0B);
+  static const Color verifiedGreen = Color(0xFF10B981);
 }
 
 /// Theme generator and typographic helper for Z01auth.
