@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/z01_theme.dart';
 
-/// Item model for permissions checklist
+/// One row in the permissions checklist.
 class PermissionItem {
   final String title;
   final String description;
+  final IconData icon;
   bool isGranted;
-  final String stepNumber;
 
   PermissionItem({
     required this.title,
     required this.description,
+    required this.icon,
     required this.isGranted,
-    required this.stepNumber,
   });
 }
 
-/// Frame 2: 02_Permissions (Android 6.0+ Permission Onboarding)
+/// Frame 2: Permissions onboarding (Android 6.0+).
+/// MOCK for now: tapping a card flips it between granted and required.
+/// Real Android permission prompts get wired in during the hardware phase.
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
 
@@ -27,232 +29,219 @@ class PermissionsScreen extends StatefulWidget {
 class _PermissionsScreenState extends State<PermissionsScreen> {
   final List<PermissionItem> _items = [
     PermissionItem(
-      title: 'Precise Location (GPS)',
-      description: 'Detects when you enter the 50m campus perimeter.',
+      title: 'Precise location',
+      description: 'Detects when you are inside the 50 m campus perimeter.',
+      icon: Icons.my_location_rounded,
       isGranted: true,
-      stepNumber: '1',
     ),
     PermissionItem(
-      title: 'Background Location',
-      description: 'Select "Allow all the time" so Time-In logs hands-free.',
+      title: 'Background location',
+      description:
+          'Choose "Allow all the time" so attendance can update while the app is closed.',
+      icon: Icons.location_searching_rounded,
       isGranted: false,
-      stepNumber: '2',
     ),
     PermissionItem(
-      title: 'Wi-Fi State & BSSID',
-      description: 'Verifies hardware MAC address of the premises router.',
+      title: 'Wi-Fi access',
+      description: 'Reads the campus router address to confirm you are on site.',
+      icon: Icons.wifi_rounded,
       isGranted: true,
-      stepNumber: '3',
     ),
     PermissionItem(
-      title: 'On-Premises Biometrics',
-      description: 'Fingerprint / Face ID unlocked only when inside campus perimeter.',
+      title: 'Biometrics',
+      description: 'Fingerprint or face unlock, available only on campus.',
+      icon: Icons.fingerprint_rounded,
       isGranted: true,
-      stepNumber: '4',
     ),
   ];
 
-  void _togglePermission(int index) {
-    setState(() {
-      _items[index].isGranted = !_items[index].isGranted;
-    });
+  int get _grantedCount => _items.where((i) => i.isGranted).length;
+  bool get _allGranted => _grantedCount == _items.length;
 
-    if (_items[index].isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(milliseconds: 900),
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            '${_items[index].title}: Permission Granted ✓',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-      );
-    }
+  void _togglePermission(int index) {
+    setState(() => _items[index].isGranted = !_items[index].isGranted);
   }
 
   void _handleContinue() {
-    // If background location is not granted, auto-grant it on continue or proceed
-    setState(() {
-      for (var item in _items) {
-        item.isGranted = true;
-      }
-    });
-
     Navigator.pushReplacementNamed(context, '/dashboard');
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? Z01Colors.darkCard : Z01Colors.lightCard;
-    final cardElevated = isDark ? Z01Colors.darkCardElevated : Z01Colors.lightCardElevated;
-    final textCol = isDark ? Z01Colors.darkText : Z01Colors.lightText;
-    final mutedCol = isDark ? Z01Colors.darkMuted : Z01Colors.lightMuted;
-    final borderCol = isDark ? Z01Colors.darkBorder : Z01Colors.lightBorder;
-    final borderStrong = isDark ? Z01Colors.darkBorderStrong : Z01Colors.lightBorderStrong;
-    final accentCol = isDark ? Z01Colors.darkAccent : Z01Colors.lightAccent;
-    final accentFg = isDark ? Z01Colors.darkAccentFg : Z01Colors.lightAccentFg;
+    final p = Z01Palette.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          '02_Permissions',
-          style: Z01Theme.monoStyle(context: context, fontSize: 13, fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Center(
-              child: Text(
-                'Android 6.0+ Flow',
-                style: Z01Theme.monoStyle(context: context, fontSize: 11, color: mutedCol),
-              ),
-            ),
-          ),
-        ],
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: textCol),
+        scrolledUnderElevation: 0,
+        iconTheme: IconThemeData(color: p.text),
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22.0, vertical: 12.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Step Badge
+              // Progress pill
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: textCol,
-                  borderRadius: BorderRadius.circular(4),
+                  color: p.cardElevated,
+                  borderRadius: BorderRadius.circular(99),
                 ),
-                child: Text(
-                  'STEP 2 OF 2',
-                  style: Z01Theme.monoStyle(
-                    context: context,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.black : Colors.white,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _allGranted ? p.brand : p.muted,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$_grantedCount of ${_items.length} enabled',
+                      style: TextStyle(fontSize: 12, color: p.text),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               Text(
-                'Enable Auto-Check-In',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 22),
+                'Set up automatic check-in',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontSize: 26,
+                      height: 1.25,
+                    ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
-                'Android requires fine location permissions to read the premises Wi-Fi BSSID and mark hands-free attendance.',
-                style: TextStyle(color: mutedCol, fontSize: 12, height: 1.4),
+                'These permissions let the app confirm you are on campus '
+                'and record your attendance for you.',
+                style: TextStyle(color: p.muted, fontSize: 14, height: 1.5),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
-              // Checklist Cards
+              // Checklist
               Expanded(
                 child: ListView.separated(
                   physics: const BouncingScrollPhysics(),
                   itemCount: _items.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final item = _items[index];
-                    final isGranted = item.isGranted;
+                  itemBuilder: (context, index) =>
+                      _permissionCard(p, _items[index], index),
+                ),
+              ),
 
-                    return GestureDetector(
-                      onTap: () => _togglePermission(index),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isGranted ? borderStrong : borderCol,
-                            width: isGranted ? 1.4 : 1.0,
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 26,
-                              height: 26,
-                              margin: const EdgeInsets.only(top: 2, right: 12),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isGranted ? textCol : cardElevated,
-                                border: Border.all(color: isGranted ? textCol : borderCol),
-                              ),
-                              alignment: Alignment.center,
-                              child: isGranted
-                                  ? Icon(Icons.check, size: 14, color: isDark ? Colors.black : Colors.white)
-                                  : Text(
-                                      item.stepNumber,
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textCol),
-                                    ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        item.title,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                          color: textCol,
-                                        ),
-                                      ),
-                                      Text(
-                                        isGranted ? 'GRANTED' : 'REQUIRED',
-                                        style: Z01Theme.monoStyle(
-                                          context: context,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                          color: isGranted ? textCol : mutedCol,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.description,
-                                    style: TextStyle(color: mutedCol, fontSize: 11, height: 1.3),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+              // Hint if background location is off
+              if (!_items[1].isGranted)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Without background location, attendance only updates '
+                          'while the app is open.',
+                          style: TextStyle(color: p.muted, fontSize: 12, height: 1.4),
                         ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
-              ),
 
-              // Bottom CTA
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentCol,
-                    foregroundColor: accentFg,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 2,
-                  ),
-                  onPressed: _handleContinue,
-                  child: const Text(
-                    'Continue to Live Radar →',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                  ),
-                ),
+              // Continue
+              FilledButton(
+                onPressed: _handleContinue,
+                child: const Text('Continue'),
               ),
               const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _permissionCard(Z01Palette p, PermissionItem item, int index) {
+    final granted = item.isGranted;
+
+    return Material(
+      color: p.card,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _togglePermission(index),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: granted ? p.brand : p.border,
+              width: granted ? 1.4 : 1.0,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Icon badge: brand fill when granted
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: granted ? p.brand : p.cardElevated,
+                ),
+                child: Icon(
+                  granted ? Icons.check_rounded : item.icon,
+                  size: 20,
+                  color: granted ? p.onBrand : p.text,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            item.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              color: p.text,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          granted ? 'ON' : 'OFF',
+                          style: Z01Theme.monoStyle(
+                            context: context,
+                            fontSize: 11,
+                            color: granted ? p.text : p.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.description,
+                      style: TextStyle(color: p.muted, fontSize: 12, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
