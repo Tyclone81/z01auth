@@ -1,11 +1,11 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import '../../core/theme/theme_controller.dart';
 import '../../core/theme/z01_theme.dart';
 import 'widgets/biometric_auth_modal.dart';
 import 'widgets/proximity_shield_hero.dart';
 
-/// Frame 1: 01_Auth (Google Auth + Proximity-Gated Biometrics)
-/// Features the interactive Lock & Shield centerpiece inspired by modern fintech UI/UX.
+/// Frame 1: 01_Auth (Google sign-in + proximity-gated biometrics)
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -14,7 +14,7 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  // Proximity gate state (Simulates physical campus perimeter detection)
+  // Simulated proximity state (mock until real sensors are wired in)
   bool _isNearPremises = true;
   String? _warningMessage;
 
@@ -24,25 +24,28 @@ class _AuthScreenState extends State<AuthScreen> {
       _warningMessage = null;
     });
 
+    final p = Z01Palette.of(context);
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         duration: const Duration(milliseconds: 1400),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: _isNearPremises ? const Color(0xFF0F172A) : const Color(0xFF1E293B),
+        backgroundColor: p.cardElevated,
         content: Row(
           children: [
             Icon(
               _isNearPremises ? Icons.shield_rounded : Icons.lock_outline_rounded,
-              color: _isNearPremises ? Z01Colors.cyanGlow : Z01Colors.lockedAmber,
+              color: p.brand,
               size: 16,
             ),
             const SizedBox(width: 8),
-            Text(
-              _isNearPremises
-                  ? 'Proximity Gate: In Range (18m) • Biometrics Unlocked'
-                  : 'Proximity Gate: Out of Range (>150m) • Biometrics Gated',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+            Expanded(
+              child: Text(
+                _isNearPremises
+                    ? 'Test mode: on premises (18 m)'
+                    : 'Test mode: off premises (>150 m)',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.text),
+              ),
             ),
           ],
         ),
@@ -53,7 +56,8 @@ class _AuthScreenState extends State<AuthScreen> {
   void _handleBiometricAuth() {
     if (!_isNearPremises) {
       setState(() {
-        _warningMessage = '⚠ Biometrics blocked: Connect to campus Wi-Fi or enter 50m perimeter.';
+        _warningMessage =
+            'Biometrics are locked. Connect to campus Wi-Fi or enter the 50 m perimeter.';
       });
       return;
     }
@@ -61,7 +65,7 @@ class _AuthScreenState extends State<AuthScreen> {
     BiometricAuthModal.show(
       context: context,
       title: 'Biometric Sign-In',
-      subtitle: 'Touch the fingerprint sensor to verify your identity at Zone01 Campus.',
+      subtitle: 'Touch the fingerprint sensor to verify your identity at Zone01.',
       proximityTag: 'PROXIMITY VERIFIED • 18m',
       onSuccess: () {
         Navigator.pushReplacementNamed(context, '/permissions');
@@ -69,27 +73,16 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  void _handleGoogleSignIn() {
-    if (!_isNearPremises) {
-      setState(() {
-        _warningMessage = '⚠ Cannot sign in: Must be near premises GPS or Wi-Fi to bind device.';
-      });
-      return;
-    }
-    // Proceed to Step 2 Permissions onboarding
+    void _handleGoogleSignIn() {
+    // Signing in only proves who you are. Attendance is recorded separately
+    // and only counts when you are on premises.
     Navigator.pushNamed(context, '/permissions');
   }
 
   @override
   Widget build(BuildContext context) {
+    final p = Z01Palette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? Z01Colors.darkCard : Z01Colors.lightCard;
-    final textCol = isDark ? Z01Colors.darkText : Z01Colors.lightText;
-    final mutedCol = isDark ? Z01Colors.darkMuted : Z01Colors.lightMuted;
-    final borderCol = isDark ? Z01Colors.darkBorder : Z01Colors.lightBorder;
-    final borderStrong = isDark ? Z01Colors.darkBorderStrong : Z01Colors.lightBorderStrong;
-    final accentCol = isDark ? Z01Colors.darkAccent : Z01Colors.lightAccent;
-    final accentFg = isDark ? Z01Colors.darkAccentFg : Z01Colors.lightAccentFg;
 
     return Scaffold(
       body: SafeArea(
@@ -100,223 +93,155 @@ class _AuthScreenState extends State<AuthScreen> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 22.0, vertical: 14.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Top Bar: Brand, Hardware Status, and Theme Toggle
+                      // ---------- TOP: wordmark + theme toggle + shield ----------
                       Column(
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: textCol,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Z01',
-                                      style: Z01Theme.monoStyle(
-                                        context: context,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w900,
-                                        color: isDark ? Colors.black : Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
                                   Text(
                                     'Z01auth',
                                     style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.3,
-                                      color: textCol,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: p.text,
+                                    ),
+                                  ),
+                                  Text(
+                                    'ZONE01 KISUMU',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      letterSpacing: 0.9,
+                                      color: p.muted,
                                     ),
                                   ),
                                 ],
                               ),
-                              Row(
-                                children: [
-                                  Text(
-                                    '5G • 100%',
-                                    style: Z01Theme.monoStyle(context: context, fontSize: 11, color: mutedCol),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Theme toggle button
-                                  IconButton(
-                                    visualDensity: VisualDensity.compact,
-                                    iconSize: 18,
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                    icon: Icon(
-                                      isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                                      color: textCol,
-                                    ),
-                                    onPressed: () => ThemeController.instance.toggleTheme(),
-                                    tooltip: 'Toggle Theme',
-                                  ),
-                                ],
+                              IconButton(
+                                iconSize: 20,
+                                tooltip: 'Toggle theme',
+                                icon: Icon(
+                                  isDark
+                                      ? Icons.light_mode_outlined
+                                      : Icons.dark_mode_outlined,
+                                  color: p.text,
+                                ),
+                                onPressed: () => ThemeController.instance.toggleTheme(),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 14),
-
-                          // The Interactive Centerpiece: Lock & Shield Proximity Hero
+                          const SizedBox(height: 16),
+                          // Test toggle only works in debug builds.
                           ProximityShieldHero(
                             isNearPremises: _isNearPremises,
-                            onToggleProximity: _toggleProximityGate,
+                            onToggleProximity:
+                                kDebugMode ? _toggleProximityGate : () {},
                           ),
                         ],
                       ),
 
-                      // Center: Contextual Status, Headline & Privacy Badges
+                      // ---------- MIDDLE: headline + status ----------
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 14.0),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         child: Column(
                           children: [
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 250),
-                              child: Text(
-                                _isNearPremises ? 'Campus Gate Unlocked' : 'Proximity Gate Armed',
-                                key: ValueKey(_isNearPremises ? 'title_near' : 'title_off'),
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.4,
-                                    ),
-                              ),
+                            Text(
+                              'Log in to mark attendance',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    fontSize: 26,
+                                    height: 1.25,
+                                  ),
                             ),
-                            const SizedBox(height: 6),
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 250),
-                              child: Text(
-                                _isNearPremises
-                                    ? 'Connected to Z01_Campus_5G. On-premises biometrics are armed for zero-touch attendance.'
-                                    : 'Campus Wi-Fi & 50m geofence not detected. Biometric attendance is locked until in proximity.',
-                                key: ValueKey(_isNearPremises ? 'desc_near' : 'desc_off'),
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: mutedCol, fontSize: 12, height: 1.45),
-                              ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Campus Wi-Fi and location confirm where you are. '
+                              'Your fingerprint confirms it\'s you.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: p.muted, fontSize: 14, height: 1.5),
                             ),
-                            const SizedBox(height: 12),
-
-                            // Micro feature tags
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              alignment: WrapAlignment.center,
-                              children: [
-                                _featurePill(context, '100% On-Device Proof'),
-                                _featurePill(context, 'Zero GPS Tracking'),
-                                _featurePill(context, 'Triple-Layer Gate'),
-                              ],
-                            ),
+                            const SizedBox(height: 16),
+                            _statusPill(p),
                           ],
                         ),
                       ),
 
-                      // Bottom Action Area
+                      // ---------- BOTTOM: actions ----------
                       Column(
                         children: [
-                          if (_warningMessage != null) ...[
+                          if (_warningMessage != null)
                             Container(
+                              width: double.infinity,
                               margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
-                                color: cardBg,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Z01Colors.lockedAmber.withValues(alpha: 0.6),
-                                  width: 1.2,
-                                ),
+                                color: p.card,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: p.borderStrong, width: 1),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.warning_amber_rounded, size: 16, color: Z01Colors.lockedAmber),
+                                  Icon(Icons.info_outline_rounded, size: 16, color: p.text),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       _warningMessage!,
-                                      style: TextStyle(color: textCol, fontSize: 11, fontWeight: FontWeight.w600),
+                                      style: TextStyle(
+                                        color: p.text,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          ],
 
-                          // Primary Button: Biometric Sign-In (Proximity-Gated)
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _isNearPremises ? accentCol : cardBg,
-                                foregroundColor: _isNearPremises ? accentFg : mutedCol,
-                                side: _isNearPremises ? null : BorderSide(color: borderCol, width: 1.2),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                elevation: _isNearPremises ? 2 : 0,
-                              ),
-                              onPressed: _handleBiometricAuth,
-                              icon: Icon(
-                                _isNearPremises ? Icons.fingerprint_rounded : Icons.lock_outline_rounded,
-                                size: 20,
-                              ),
-                              label: Text(
-                                _isNearPremises
-                                    ? 'Sign In with Biometrics (On-Premises)'
-                                    : '🔒 Biometrics Locked (Move Near Campus)',
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          // Primary: Google
+                          FilledButton.icon(
+                            onPressed: _handleGoogleSignIn,
+                            icon: Text(
+                              'G',
+                              style: Z01Theme.monoStyle(
+                                context: context,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: p.accentFg,
                               ),
                             ),
+                            label: const Text('Continue with Google'),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
 
-                          // Secondary Button: Google Sign-In
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: cardBg,
-                                side: BorderSide(color: borderStrong, width: 1.2),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              ),
-                              onPressed: _handleGoogleSignIn,
-                              icon: Text(
-                                'G',
-                                style: Z01Theme.monoStyle(
-                                  context: context,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: textCol,
-                                ),
-                              ),
-                              label: Text(
-                                'Continue with Google',
-                                style: TextStyle(color: textCol, fontWeight: FontWeight.w700, fontSize: 13),
-                              ),
+                          // Secondary: Biometrics (locked look when off premises)
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _isNearPremises ? p.text : p.muted,
+                            ),
+                            onPressed: _handleBiometricAuth,
+                            icon: Icon(
+                              _isNearPremises
+                                  ? Icons.fingerprint_rounded
+                                  : Icons.lock_outline_rounded,
+                              size: 20,
+                            ),
+                            label: Text(
+                              _isNearPremises
+                                  ? 'Sign in with biometrics'
+                                  : 'Biometrics unlock on campus',
                             ),
                           ),
-                          const SizedBox(height: 10),
-
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.shield_outlined, size: 12, color: mutedCol),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Local verification only • Your personal data stays on device',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: mutedCol, fontSize: 10),
-                              ),
-                            ],
+                          const SizedBox(height: 12),
+                          Text(
+                            'Biometrics never leave your device.',
+                            style: TextStyle(color: p.muted, fontSize: 12),
                           ),
                         ],
                       ),
@@ -331,21 +256,34 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _featurePill(BuildContext context, String text) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? Z01Colors.darkCard : Z01Colors.lightCard;
-    final borderCol = isDark ? Z01Colors.darkBorder : Z01Colors.lightBorder;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderCol),
-      ),
-      child: Text(
-        text,
-        style: Z01Theme.monoStyle(context: context, fontSize: 9, fontWeight: FontWeight.w600),
+  Widget _statusPill(Z01Palette p) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      child: Container(
+        key: ValueKey(_isNearPremises),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: p.cardElevated,
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _isNearPremises ? p.brand : p.muted,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _isNearPremises ? 'On premises · 18 m' : 'Off premises · >150 m',
+              style: TextStyle(fontSize: 12, color: p.text),
+            ),
+          ],
+        ),
       ),
     );
   }
