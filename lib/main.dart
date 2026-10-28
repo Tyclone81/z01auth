@@ -19,7 +19,7 @@ class Z01AuthApp extends StatelessWidget {
       valueListenable: ThemeController.instance,
       builder: (context, themeMode, child) {
         return MaterialApp(
-          title: 'Z01auth',
+          title: 'Z01 Authentication App',
           debugShowCheckedModeBanner: false,
           theme: Z01Theme.lightTheme,
           darkTheme: Z01Theme.darkTheme,

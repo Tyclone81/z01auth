@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/z01_theme.dart';
 
-/// Interactive modal sheet simulating Android biometric fingerprint authentication
+/// Bottom sheet that simulates Android biometric (fingerprint) verification.
+/// Mock for now: tapping the fingerprint counts as a successful scan.
+/// Colours come from Z01Palette, so it works in dark and light mode.
 class BiometricAuthModal extends StatefulWidget {
   final String title;
   final String subtitle;
@@ -42,31 +44,32 @@ class BiometricAuthModal extends StatefulWidget {
 
 class _BiometricAuthModalState extends State<BiometricAuthModal>
     with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
+  late final AnimationController _pulse;
   bool _isSuccess = false;
-  String _statusMessage = 'Tap fingerprint icon to verify';
+  String _statusMessage = 'Tap the fingerprint to verify';
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
+    _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
+    )..repeat();
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
-  void _handleScan() async {
+  Future<void> _handleScan() async {
     if (_isSuccess) return;
     setState(() {
       _isSuccess = true;
-      _statusMessage = '✓ Biometrics Verified! Authenticating...';
+      _statusMessage = 'Verified. Signing you in...';
     });
+    _pulse.stop();
 
     await Future.delayed(const Duration(milliseconds: 700));
     if (mounted) {
@@ -77,19 +80,13 @@ class _BiometricAuthModalState extends State<BiometricAuthModal>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgCol = isDark ? Z01Colors.darkBg : Z01Colors.lightBg;
-    final cardBg = isDark ? Z01Colors.darkCard : Z01Colors.lightCard;
-    final textCol = isDark ? Z01Colors.darkText : Z01Colors.lightText;
-    final mutedCol = isDark ? Z01Colors.darkMuted : Z01Colors.lightMuted;
-    final borderStrong = isDark ? Z01Colors.darkBorderStrong : Z01Colors.lightBorderStrong;
-    final borderCol = isDark ? Z01Colors.darkBorder : Z01Colors.lightBorder;
+    final p = Z01Palette.of(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: bgCol,
+        color: p.bg,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: borderStrong, width: 2)),
+        border: Border(top: BorderSide(color: p.border, width: 1)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: SafeArea(
@@ -97,103 +94,133 @@ class _BiometricAuthModalState extends State<BiometricAuthModal>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Drag Handle
+            // Drag handle
             Container(
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: mutedCol.withValues(alpha: 0.4),
+                color: p.muted.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Proximity tag (small pill with a brand dot)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: p.cardElevated,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: p.brand,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    widget.proximityTag,
+                    style: Z01Theme.monoStyle(
+                      context: context,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: p.text,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
 
-            // Proximity Tag Badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: textCol,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                widget.proximityTag,
-                style: Z01Theme.monoStyle(
-                  context: context,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.black : Colors.white,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
             Text(
               widget.title,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 20),
             ),
             const SizedBox(height: 6),
             Text(
               widget.subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(color: mutedCol, fontSize: 12, height: 1.4),
+              style: TextStyle(color: p.muted, fontSize: 13, height: 1.45),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
 
-            // Interactive Fingerprint Scan Circle with animated pulse
-            AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                final glow = _isSuccess ? 18.0 : 6.0 + (_pulseController.value * 12.0);
-                return GestureDetector(
-                  onTap: _handleScan,
-                  child: Container(
-                    width: 86,
-                    height: 86,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: cardBg,
-                      border: Border.all(color: borderStrong, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: textCol.withValues(alpha: _isSuccess ? 0.35 : 0.15),
-                          blurRadius: glow,
-                          spreadRadius: glow / 3,
+            // Fingerprint button with a soft expanding ring (no glow shadows)
+            GestureDetector(
+              onTap: _handleScan,
+              child: SizedBox(
+                width: 150,
+                height: 150,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (!_isSuccess)
+                      AnimatedBuilder(
+                        animation: _pulse,
+                        builder: (context, _) {
+                          final t = _pulse.value;
+                          return Opacity(
+                            opacity: (1 - t) * 0.4,
+                            child: Container(
+                              width: 90 + t * 60,
+                              height: 90 + t * 60,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: p.brand, width: 1.5),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _isSuccess ? p.brand : p.card,
+                        border: Border.all(
+                          color: _isSuccess ? p.brand : p.border,
+                          width: 1.5,
                         ),
-                      ],
+                      ),
+                      child: Icon(
+                        _isSuccess
+                            ? Icons.check_rounded
+                            : Icons.fingerprint_rounded,
+                        size: 46,
+                        color: _isSuccess ? p.onBrand : p.text,
+                      ),
                     ),
-                    child: Icon(
-                      _isSuccess ? Icons.check_circle_rounded : Icons.fingerprint_rounded,
-                      size: 44,
-                      color: textCol,
-                    ),
-                  ),
-                );
-              },
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
 
             Text(
               _statusMessage,
-              style: Z01Theme.monoStyle(
-                context: context,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: textCol,
+              style: TextStyle(
+                color: _isSuccess ? p.text : p.muted,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 24),
 
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: borderCol),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancel', style: TextStyle(color: mutedCol, fontSize: 13, fontWeight: FontWeight.w600)),
+            // Cancel (pill outline button comes from the theme)
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: p.muted,
+                minimumSize: const Size.fromHeight(48),
               ),
+              onPressed: _isSuccess ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
           ],
         ),

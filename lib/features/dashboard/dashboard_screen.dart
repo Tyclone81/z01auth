@@ -1,13 +1,14 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/theme/theme_controller.dart';
 import '../../core/theme/z01_theme.dart';
 import '../../models/presence_state.dart';
 import '../../services/attendance_service.dart';
 import '../auth/widgets/biometric_auth_modal.dart';
 import 'widgets/radar_ring.dart';
-import 'widgets/settings_drawer.dart';
 
-/// Frame 3: 03_Dashboard (Live Radar & Heartbeat Dashboard)
+/// Frame 3: Dashboard (live presence + Time In / Time Out + recent detections)
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -18,17 +19,28 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final AttendanceService _attendanceService = AttendanceService.instance;
 
+  static const _days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  static const _months = [
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+  ];
+
   @override
   void initState() {
     super.initState();
     _attendanceService.initialize();
   }
 
+  String get _todayLabel {
+    final now = DateTime.now();
+    return '${_days[now.weekday - 1]} · ${now.day} ${_months[now.month - 1]}';
+  }
+
   void _triggerBiometricSync() {
     if (_attendanceService.presenceState == PresenceState.offPremises) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('🔒 Biometrics blocked: Move near campus perimeter to unlock.'),
+          content: Text('Biometrics are locked. Move near the campus to unlock.'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -37,9 +49,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     BiometricAuthModal.show(
       context: context,
-      title: 'Confirm Presence Biometrics',
-      subtitle: 'Scan your fingerprint while on Z01_Campus_5G to sync attendance.',
-      proximityTag: 'ON-PREMISES VERIFIED',
+      title: 'Confirm your presence',
+      subtitle: 'Scan your fingerprint to sync your attendance.',
+      proximityTag: 'ON PREMISES',
       onSuccess: () async {
         final success = await _attendanceService.authenticateAndSync(
           triggerType: AttendanceTriggerType.manualBiometricSync,
@@ -49,7 +61,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SnackBar(
               duration: Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
-              content: Text('Attendance Synced with Go Backend ✓', style: TextStyle(fontWeight: FontWeight.w600)),
+              content: Text(
+                'Attendance synced',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           );
         }
@@ -59,84 +74,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = Z01Palette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? Z01Colors.darkCard : Z01Colors.lightCard;
-    final textCol = isDark ? Z01Colors.darkText : Z01Colors.lightText;
-    final mutedCol = isDark ? Z01Colors.darkMuted : Z01Colors.lightMuted;
-    final borderCol = isDark ? Z01Colors.darkBorder : Z01Colors.lightBorder;
-    final accentCol = isDark ? Z01Colors.darkAccent : Z01Colors.lightAccent;
-    final accentFg = isDark ? Z01Colors.darkAccentFg : Z01Colors.lightAccentFg;
 
     return ListenableBuilder(
       listenable: _attendanceService,
       builder: (context, _) {
-        final currentState = _attendanceService.presenceState;
+        final state = _attendanceService.presenceState;
         final isPinging = _attendanceService.isSyncing;
         final lastSeenTime = _attendanceService.lastSeenEat;
         final detections = _attendanceService.recentDetections;
 
+        final isOff = state == PresenceState.offPremises;
+        final isIn = state == PresenceState.checkedIn;
+
         return Scaffold(
           body: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Top Bar
+                  // ---------- Header ----------
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Text('Z01auth', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 20)),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: textCol,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  isPinging ? '● SYNCING' : '● SYNCED',
-                                  style: Z01Theme.monoStyle(
-                                    context: context,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w800,
-                                    color: isDark ? Colors.black : Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            _todayLabel,
+                            style: TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 0.9,
+                              color: p.muted,
+                            ),
                           ),
                           const SizedBox(height: 2),
-                          Text('Wed, Oct 14 • Zone01 Campus', style: TextStyle(color: mutedCol, fontSize: 11)),
+                          Text(
+                            isPinging ? 'Syncing...' : 'Today',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: p.text,
+                            ),
+                          ),
                         ],
                       ),
                       Row(
                         children: [
+                          // Debug-only: cycles the radar through its 3 states
+                          if (kDebugMode)
+                            IconButton(
+                              tooltip: 'Cycle state (debug)',
+                              icon: Icon(Icons.tune_rounded, size: 20, color: p.muted),
+                              onPressed: _attendanceService.cycleStateForDemo,
+                            ),
                           IconButton(
-                            tooltip: 'Cycle Radar State',
-                            icon: const Icon(Icons.tune_rounded, size: 20),
-                            onPressed: _attendanceService.cycleStateForDemo,
-                          ),
-                          IconButton(
-                            tooltip: 'Settings Menu',
-                            icon: const Icon(Icons.menu_rounded, size: 22),
-                            onPressed: () => SettingsDrawer.show(context),
+                            tooltip: 'Toggle theme',
+                            icon: Icon(
+                              isDark
+                                  ? Icons.light_mode_outlined
+                                  : Icons.dark_mode_outlined,
+                              size: 20,
+                              color: p.text,
+                            ),
+                            onPressed: () => ThemeController.instance.toggleTheme(),
                           ),
                           const SizedBox(width: 4),
                           CircleAvatar(
-                            radius: 17,
-                            backgroundColor: textCol,
+                            radius: 18,
+                            backgroundColor: p.cardElevated,
+                            // Placeholder initials until Firebase user is wired in
                             child: Text(
                               'AB',
                               style: TextStyle(
-                                color: isDark ? Colors.black : Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
+                                color: p.text,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -144,60 +158,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
 
-                  // Presence Radar Ring
+                  // ---------- Presence ring ----------
                   PresenceRadarRing(
-                    state: currentState,
-                    onTap: _attendanceService.cycleStateForDemo,
+                    state: state,
+                    onTap: kDebugMode
+                        ? _attendanceService.cycleStateForDemo
+                        : () {},
                   ),
                   const SizedBox(height: 16),
 
-                  // Verification Status Pills
+                  // ---------- Verification pills ----------
                   Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                    spacing: 8,
+                    runSpacing: 8,
                     alignment: WrapAlignment.center,
                     children: [
                       _statusPill(
-                        context,
-                        currentState == PresenceState.checkedIn
-                            ? 'Wi-Fi: Z01_Campus_5G ✓'
-                            : currentState == PresenceState.approaching
-                                ? 'Wi-Fi: Scanning...'
-                                : 'Wi-Fi: Disconnected',
-                        isVerified: currentState == PresenceState.checkedIn,
+                        p,
+                        Icons.wifi_rounded,
+                        isIn
+                            ? 'Wi-Fi verified'
+                            : state == PresenceState.approaching
+                                ? 'Wi-Fi scanning'
+                                : 'Wi-Fi not detected',
+                        verified: isIn,
                       ),
                       _statusPill(
-                        context,
-                        currentState != PresenceState.offPremises
-                            ? 'GPS: Inside Premises ✓'
-                            : 'GPS: Outside (>150m)',
-                        isVerified: currentState != PresenceState.offPremises,
+                        p,
+                        Icons.my_location_rounded,
+                        isOff ? 'Outside campus' : 'On campus',
+                        verified: !isOff,
                       ),
                       _statusPill(
-                        context,
-                        currentState == PresenceState.checkedIn
-                            ? 'Biometrics: Verified ✓'
-                            : currentState == PresenceState.approaching
-                                ? 'Biometrics: Unlocked'
-                                : 'Biometrics: Locked 🔒',
-                        isVerified: currentState == PresenceState.checkedIn,
+                        p,
+                        isOff ? Icons.lock_outline_rounded : Icons.fingerprint_rounded,
+                        isIn
+                            ? 'Biometric verified'
+                            : state == PresenceState.approaching
+                                ? 'Biometric ready'
+                                : 'Biometric locked',
+                        verified: isIn,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
 
-                  // 2-Column Summary Cards (FIRST SEEN & LAST SEEN)
+                  // ---------- Time In / Time Out ----------
                   Row(
                     children: [
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: borderCol),
+                            color: p.brand,
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,31 +222,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'FIRST SEEN (IN)',
-                                    style: Z01Theme.monoStyle(context: context, fontSize: 9, color: mutedCol, fontWeight: FontWeight.w700),
+                                    'FIRST SEEN · IN',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      letterSpacing: 0.8,
+                                      color: p.onBrand,
+                                    ),
                                   ),
-                                  Icon(Icons.lock_outline_rounded, size: 13, color: textCol),
+                                  Icon(Icons.lock_outline_rounded,
+                                      size: 14, color: p.onBrand),
                                 ],
                               ),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 10),
                               Text(
                                 _attendanceService.firstSeenEat,
-                                style: Z01Theme.monoStyle(context: context, fontSize: 13, fontWeight: FontWeight.w800),
+                                style: Z01Theme.monoStyle(
+                                  context: context,
+                                  fontSize: 18,
+                                  color: p.onBrand,
+                                ),
                               ),
-                              const SizedBox(height: 2),
-                              Text('Locked for today', style: TextStyle(color: mutedCol, fontSize: 9)),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Locked for today',
+                                style: TextStyle(fontSize: 11, color: p.onBrand),
+                              ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: borderCol),
+                            color: p.card,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: p.border),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,122 +267,141 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'LAST SEEN (OUT)',
-                                    style: Z01Theme.monoStyle(context: context, fontSize: 9, color: mutedCol, fontWeight: FontWeight.w700),
+                                    'LAST SEEN · OUT',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      letterSpacing: 0.8,
+                                      color: p.muted,
+                                    ),
                                   ),
-                                  Icon(Icons.sync_rounded, size: 14, color: textCol),
+                                  Icon(Icons.sync_rounded, size: 14, color: p.muted),
                                 ],
                               ),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 10),
                               Text(
                                 lastSeenTime,
-                                style: Z01Theme.monoStyle(context: context, fontSize: 13, fontWeight: FontWeight.w800),
+                                style: Z01Theme.monoStyle(
+                                  context: context,
+                                  fontSize: 18,
+                                ),
                               ),
-                              const SizedBox(height: 2),
-                              Text('Updates on Wi-Fi', style: TextStyle(color: mutedCol, fontSize: 9)),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Updates with each ping',
+                                style: TextStyle(fontSize: 11, color: p.muted),
+                              ),
                             ],
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
 
-                  // Action Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: currentState != PresenceState.offPremises ? accentCol : cardBg,
-                        foregroundColor: currentState != PresenceState.offPremises ? accentFg : mutedCol,
-                        side: currentState != PresenceState.offPremises ? null : BorderSide(color: borderCol),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: currentState != PresenceState.offPremises ? 2 : 0,
-                      ),
-                      onPressed: currentState != PresenceState.offPremises ? _triggerBiometricSync : null,
-                      icon: isPinging
-                          ? SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: accentFg),
-                            )
-                          : Icon(
-                              currentState != PresenceState.offPremises ? Icons.fingerprint_rounded : Icons.lock_outline_rounded,
-                              size: 18,
+                  // ---------- Action button ----------
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      disabledBackgroundColor: p.card,
+                      disabledForegroundColor: p.muted,
+                    ),
+                    onPressed: isOff ? null : _triggerBiometricSync,
+                    icon: isPinging
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: p.accentFg,
                             ),
-                      label: Text(
-                        currentState == PresenceState.checkedIn
-                            ? 'Biometric Verify & Sync Attendance'
-                            : currentState == PresenceState.approaching
-                                ? 'Scan Fingerprint to Check In'
-                                : '🔒 Move Near Campus to Unlock',
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-                      ),
+                          )
+                        : Icon(
+                            isOff
+                                ? Icons.lock_outline_rounded
+                                : Icons.fingerprint_rounded,
+                            size: 20,
+                          ),
+                    label: Text(
+                      isIn
+                          ? 'Verify & sync attendance'
+                          : state == PresenceState.approaching
+                              ? 'Scan fingerprint to check in'
+                              : 'Move near campus to unlock',
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
 
-                  // Recent Detections List
+                  // ---------- Recent detections ----------
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'RECENT DETECTIONS',
-                      style: Z01Theme.monoStyle(
-                        context: context,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: mutedCol,
+                      style: TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 0.9,
+                        color: p.muted,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-
+                  const SizedBox(height: 10),
                   Container(
                     decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: borderCol),
+                      color: p.card,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: p.border),
                     ),
                     child: ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: detections.length,
-                      separatorBuilder: (_, _) => Divider(color: borderCol, height: 1),
+                      separatorBuilder: (_, _) =>
+                          Divider(color: p.border, height: 1),
                       itemBuilder: (context, index) {
                         final log = detections[index];
                         return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                           child: Row(
                             children: [
                               Container(
-                                width: 6,
-                                height: 6,
+                                width: 7,
+                                height: 7,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: textCol,
+                                  color: index == 0 ? p.brand : p.muted,
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       log.title,
-                                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: textCol),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                        color: p.text,
+                                      ),
                                     ),
-                                    const SizedBox(height: 1),
+                                    const SizedBox(height: 2),
                                     Text(
                                       log.subtitle,
-                                      style: Z01Theme.monoStyle(context: context, fontSize: 9, color: mutedCol),
+                                      style: Z01Theme.monoStyle(
+                                        context: context,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                        color: p.muted,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               Text(
                                 log.timeEat,
-                                style: Z01Theme.monoStyle(context: context, fontSize: 10, fontWeight: FontWeight.w600),
+                                style: Z01Theme.monoStyle(
+                                  context: context,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -371,29 +418,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _statusPill(BuildContext context, String text, {required bool isVerified}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? Z01Colors.darkCard : Z01Colors.lightCard;
-    final borderCol = isDark ? Z01Colors.darkBorder : Z01Colors.lightBorder;
-    final borderStrong = isDark ? Z01Colors.darkBorderStrong : Z01Colors.lightBorderStrong;
-    final textCol = isDark ? Z01Colors.darkText : Z01Colors.lightText;
-    final mutedCol = isDark ? Z01Colors.darkMuted : Z01Colors.lightMuted;
-
+  Widget _statusPill(
+    Z01Palette p,
+    IconData icon,
+    String text, {
+    required bool verified,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isVerified ? borderStrong : borderCol, width: isVerified ? 1.2 : 1),
+        color: p.cardElevated,
+        borderRadius: BorderRadius.circular(99),
       ),
-      child: Text(
-        text,
-        style: Z01Theme.monoStyle(
-          context: context,
-          fontSize: 9,
-          fontWeight: FontWeight.w600,
-          color: isVerified ? textCol : mutedCol,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: verified ? p.brand : p.muted),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: verified ? p.text : p.muted,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -3,7 +3,8 @@ import '../../core/theme/z01_theme.dart';
 import '../../models/presence_state.dart';
 import 'widgets/attendance_detail_sheet.dart';
 
-/// Frame 4: 04_History (Monthly Attendance Log & Summary)
+/// Frame 4: History (monthly summary + daily attendance log)
+/// MOCK DATA for now. Real records come from the backend later.
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
@@ -85,171 +86,97 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? Z01Colors.darkCard : Z01Colors.lightCard;
-    final cardElevated = isDark ? Z01Colors.darkCardElevated : Z01Colors.lightCardElevated;
-    final textCol = isDark ? Z01Colors.darkText : Z01Colors.lightText;
-    final mutedCol = isDark ? Z01Colors.darkMuted : Z01Colors.lightMuted;
-    final borderCol = isDark ? Z01Colors.darkBorder : Z01Colors.lightBorder;
-    final borderStrong = isDark ? Z01Colors.darkBorderStrong : Z01Colors.lightBorderStrong;
+    final p = Z01Palette.of(context);
 
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header & Month Selector
+              // ---------- Header + month picker ----------
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Attendance Log', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 20)),
+                  Text(
+                    'History',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: p.text,
+                    ),
+                  ),
                   GestureDetector(
                     onTap: _switchMonth,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                       decoration: BoxDecoration(
-                        color: cardBg,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: borderCol),
+                        color: p.cardElevated,
+                        borderRadius: BorderRadius.circular(99),
                       ),
                       child: Row(
                         children: [
                           Text(
                             _selectedMonth,
-                            style: Z01Theme.monoStyle(context: context, fontSize: 11, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: p.text,
+                            ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.arrow_drop_down, size: 16, color: textCol),
+                          Icon(Icons.keyboard_arrow_down_rounded,
+                              size: 18, color: p.muted),
                         ],
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
 
-              // Monthly Summary Strip (3 Columns)
+              // ---------- Summary ----------
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
                 decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: borderStrong, width: 1.2),
+                  color: p.card,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: p.border),
                 ),
                 child: Row(
                   children: [
                     Expanded(
-                      child: _statColumn(context, 'PRESENT', '${_summary.daysPresent}d'),
+                      child: _statColumn(p, 'DAYS PRESENT', '${_summary.daysPresent}d'),
                     ),
-                    Container(width: 1, height: 28, color: borderCol),
+                    Container(width: 1, height: 32, color: p.border),
                     Expanded(
-                      child: _statColumn(context, 'AVG HOURS', '${_summary.avgHours}h'),
+                      child: _statColumn(p, 'AVG HOURS', '${_summary.avgHours}h'),
                     ),
-                    Container(width: 1, height: 28, color: borderCol),
+                    Container(width: 1, height: 32, color: p.border),
                     Expanded(
-                      child: _statColumn(context, 'VERIFIED', '${_summary.verificationRatePercent}%'),
+                      child: _statColumn(
+                          p, 'VERIFIED', '${_summary.verificationRatePercent}%'),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // Daily Log Cards
+              Text(
+                'DAILY LOG',
+                style: TextStyle(fontSize: 11, letterSpacing: 0.9, color: p.muted),
+              ),
+              const SizedBox(height: 10),
+
+              // ---------- Daily cards ----------
               Expanded(
                 child: ListView.separated(
                   physics: const BouncingScrollPhysics(),
                   itemCount: _records.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final item = _records[index];
-                    return GestureDetector(
-                      onTap: () => AttendanceDetailSheet.show(context, item),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: item.isActive ? borderStrong : borderCol,
-                            width: item.isActive ? 1.4 : 1.0,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  item.dateTitle,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: item.isActive ? FontWeight.w800 : FontWeight.w600,
-                                    color: textCol,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: item.isActive ? textCol : cardElevated,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    item.isActive ? 'Active' : item.duration,
-                                    style: Z01Theme.monoStyle(
-                                      context: context,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: item.isActive
-                                          ? (isDark ? Colors.black : Colors.white)
-                                          : textCol,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                RichText(
-                                  text: TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: 'IN: ',
-                                        style: Z01Theme.monoStyle(context: context, fontSize: 11, color: mutedCol),
-                                      ),
-                                      TextSpan(
-                                        text: item.timeIn,
-                                        style: Z01Theme.monoStyle(context: context, fontSize: 11, fontWeight: FontWeight.w700),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Text('→', style: TextStyle(color: mutedCol, fontSize: 11)),
-                                RichText(
-                                  text: TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: item.isActive ? 'LAST: ' : 'OUT: ',
-                                        style: Z01Theme.monoStyle(context: context, fontSize: 11, color: mutedCol),
-                                      ),
-                                      TextSpan(
-                                        text: item.timeOut,
-                                        style: Z01Theme.monoStyle(context: context, fontSize: 11, fontWeight: FontWeight.w700),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) =>
+                      _recordCard(p, _records[index]),
                 ),
               ),
             ],
@@ -259,16 +186,107 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _statColumn(BuildContext context, String title, String value) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final mutedCol = isDark ? Z01Colors.darkMuted : Z01Colors.lightMuted;
+  Widget _recordCard(Z01Palette p, AttendanceRecord item) {
+    return Material(
+      color: p.card,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => AttendanceDetailSheet.show(context, item),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: item.isActive ? p.brand : p.border,
+              width: item.isActive ? 1.4 : 1.0,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      item.dateTitle,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: p.text,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: item.isActive ? p.brand : p.cardElevated,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      item.isActive ? 'Active' : item.duration,
+                      style: Z01Theme.monoStyle(
+                        context: context,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: item.isActive ? p.onBrand : p.text,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _timeBlock(p, 'IN', item.timeIn),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Icon(Icons.arrow_forward_rounded,
+                        size: 16, color: p.muted),
+                  ),
+                  _timeBlock(p, item.isActive ? 'LAST SEEN' : 'OUT', item.timeOut),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
+  Widget _timeBlock(Z01Palette p, String label, String time) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, letterSpacing: 0.8, color: p.muted),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          time,
+          style: Z01Theme.monoStyle(context: context, fontSize: 14),
+        ),
+      ],
+    );
+  }
+
+  Widget _statColumn(Z01Palette p, String title, String value) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(title, style: Z01Theme.monoStyle(context: context, fontSize: 8, color: mutedCol, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 2),
-        Text(value, style: Z01Theme.monoStyle(context: context, fontSize: 15, fontWeight: FontWeight.w800)),
+        Text(
+          title,
+          style: TextStyle(fontSize: 10, letterSpacing: 0.8, color: p.muted),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: Z01Theme.monoStyle(context: context, fontSize: 20),
+        ),
       ],
     );
   }
