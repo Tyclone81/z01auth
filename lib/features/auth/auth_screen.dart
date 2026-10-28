@@ -103,26 +103,30 @@ class _AuthScreenState extends State<AuthScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Z01auth',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600,
-                                      color: p.text,
+                                                            Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Z01 Authentication App',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: p.text,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    'ZONE01 KISUMU',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      letterSpacing: 0.9,
-                                      color: p.muted,
+                                    Text(
+                                      'ZONE01 KISUMU',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        letterSpacing: 0.9,
+                                        color: p.muted,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                               IconButton(
                                 iconSize: 20,
